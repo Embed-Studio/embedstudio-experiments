@@ -1,0 +1,31 @@
+{
+  "experiment": "005",
+  "title": "MPU6050 Noise / Filtering Experiment",
+  "sensor": "MPU6050",
+  "acquisition_rate_hz": 1000,
+  "accelerometer_range": "±2 g",
+  "gyroscope_range": "±250 °/s",
+  "captures": [
+    {
+      "file": "data/capture_20260820_195646_260Hz.hdf5",
+      "purpose": "maximum-bandwidth noise baseline",
+      "dlpf": "~260 Hz"
+    },
+    {
+      "file": "data/capture_20260820_200144_44Hz.hdf5",
+      "purpose": "hardware DLPF comparison",
+      "dlpf": "~44 Hz"
+    },
+    {
+      "file": "data/capture_20260820_200320_20Hz.hdf5",
+      "purpose": "hardware DLPF comparison",
+      "dlpf": "~20 Hz"
+    },
+    {
+      "file": "data/capture_20260823_112024_gyro_x_flipping.hdf5",
+      "purpose": "dynamic response experiment",
+      "signal": "gyro_x"
+    }
+  ],
+  "software_filters_hz": [22, 10, 5]
+}
