@@ -21,10 +21,14 @@ effect of hardware and software low-pass filtering.
 
 | Dataset | Configuration | Purpose |
 |---|---|---|
-| `capture_20260820_195646_260Hz.hdf5` | ~260 Hz DLPF | Maximum-bandwidth noise baseline |
-| `capture_20260820_200144_44Hz.hdf5` | ~44 Hz DLPF | Hardware filtering |
-| `capture_20260820_200320_20Hz.hdf5` | ~20 Hz DLPF | Hardware filtering |
-| `capture_20260823_112024_gyro_x_flipping.hdf5` | Dynamic test | Gyro X response |
+| [260 Hz DLPF](data/capture_20260820_195646_260Hz.hdf5) | ~260 Hz DLPF | Maximum-bandwidth noise baseline |
+| [44 Hz DLPF](data/capture_20260820_200144_44Hz.hdf5) | ~44 Hz DLPF | Hardware filtering |
+| [20 Hz DLPF](data/capture_20260820_200320_20Hz.hdf5) | ~20 Hz DLPF | Hardware filtering |
+| [Gyro X flipping](data/capture_20260823_112024_gyro_x_flipping.hdf5) | Dynamic test | Gyro X response |
+
+HDF5 files are raw binary datasets and cannot be previewed directly by
+GitHub. Download the dataset and open it with EmbedStudio or another
+compatible HDF5 tool.
 
 ## Software filtering
 
