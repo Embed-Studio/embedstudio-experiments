@@ -1,0 +1,58 @@
+{
+  "experiment": "006",
+  "title": "MPU6050 Estimating Attitude from the Gravity Vector",
+  "sensor": "MPU6050",
+  "acquisition_rate_hz": 1000,
+  "accelerometer_range": "±2 g",
+  "gyroscope_range": "±250 °/s",
+  "attitude": {
+    "roll_deg": "atan2(a_y, a_z)",
+    "pitch_deg": "atan2(-a_x, sqrt(a_y^2 + a_z^2))",
+    "computed": "on-target, by the firmware, and recorded as the attitude_deg channels"
+  },
+  "captures": [
+    {
+      "file": "data/capture_20260829_153127_stationary.hdf5",
+      "purpose": "stationary reference before the rotations"
+    },
+    {
+      "file": "data/capture_20260829_153445_roll.hdf5",
+      "purpose": "full rotation about X, showing the roll wrap at ±180°",
+      "axis": "X"
+    },
+    {
+      "file": "data/capture_20260829_153509_pitch.hdf5",
+      "purpose": "rotation about Y, showing pitch limited to ±90° and roll taking over",
+      "axis": "Y"
+    },
+    {
+      "file": "data/capture_20260829_160044_noise_DLPF_260Hz.hdf5",
+      "purpose": "stationary attitude noise at maximum sensor bandwidth",
+      "dlpf": "260 Hz"
+    },
+    {
+      "file": "data/capture_20260829_160158_noise_DLPF_22Hz.hdf5",
+      "purpose": "stationary attitude noise with the sensor bandwidth narrowed",
+      "dlpf": "22 Hz"
+    },
+    {
+      "file": "data/capture_20260829_160441_linear_movement.hdf5",
+      "purpose": "horizontal movement without rotation, showing gravity and linear acceleration being confused"
+    }
+  ],
+  "channels": [
+    "accel_g.__struct.x",
+    "accel_g.__struct.y",
+    "accel_g.__struct.z",
+    "accel_magnitude_g",
+    "attitude_deg.roll",
+    "attitude_deg.pitch",
+    "mpu_data.temperature",
+    "timings.data_exchange_time_us",
+    "timings.sample_time_us",
+    "timings.signal_processing_us"
+  ],
+  "notes": [
+    "The sensor samples at 1 kHz. Samples reach the host over SWD at roughly 420/s, which is the polling rate of the acquisition and not a property of the sensor."
+  ]
+}

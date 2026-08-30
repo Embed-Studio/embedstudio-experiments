@@ -11,3 +11,4 @@ readers to inspect and analyze the measurements themselves.
 | # | Experiment | Data |
 |---|---|---|
 | 005 | MPU6050 Noise / Filtering | [Dataset](005-mpu6050-noise-filtering/) |
+| 006 | MPU6050 Estimating Attitude | [Dataset](006-mpu6050-estimating-attitude/) |
