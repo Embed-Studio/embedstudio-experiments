@@ -1,0 +1,74 @@
+{
+  "experiment": "007",
+  "title": "When Accelerometer Roll Estimation Fails: The Pitch Singularity",
+  "sensor": "MPU6050",
+  "acquisition_rate_hz": 1000,
+  "accelerometer_range": "±2 g",
+  "gyroscope_range": "±250 °/s",
+  "dlpf_bandwidth_hz": 21,
+  "attitude": {
+    "roll_deg": "atan2(a_y, a_z)",
+    "pitch_deg": "atan2(-a_x, sqrt(a_y^2 + a_z^2))",
+    "regularized_roll_deg": "atan2(a_y, copysign(1, a_z) * sqrt(a_z^2 + mu * a_x^2))",
+    "computed": "on-target, by the firmware, and recorded as the attitude_deg and attitude_reg_deg channels"
+  },
+  "regularization": {
+    "coefficients": [
+      { "channel_index": 0, "mu": 0.0 },
+      { "channel_index": 1, "mu": 0.1 },
+      { "channel_index": 2, "mu": 0.01 },
+      { "channel_index": 3, "mu": 0.001 },
+      { "channel_index": 4, "mu": 0.0001 }
+    ],
+    "note": "The subscript in attitude_reg_deg[i] is an index into the firmware's mu table, not a value. The order is NOT monotone: [1] is the strongest regularization and [4] the weakest. mu = 0 in [0] is the unregularized estimate."
+  },
+  "captures": [
+    {
+      "file": "data/capture_20260901_205235_roll_singularity.hdf5",
+      "purpose": "board rotated to vertical and back, driving pitch to -89.4° so the roll estimate loses its input",
+      "samples": 9921,
+      "duration_s": 35.43,
+      "pitch_range_deg": [-89.39, 2.15],
+      "singular_window_s": [13.77, 21.91],
+      "notes": "|pitch| exceeds 85° between 13.8 s and 21.9 s. a_z changes sign from 16.30 s onwards, where every estimate correctly reports a real change of orientation rather than noise."
+    },
+    {
+      "file": "data/capture_20260901_205326_arbitrary_inclinations.hdf5",
+      "purpose": "ordinary hand-held movement well away from the singularity, showing what regularization costs at everyday angles",
+      "samples": 3493,
+      "duration_s": 12.54,
+      "roll_range_deg": [-37.24, 45.41],
+      "pitch_range_deg": [-37.93, 20.08],
+      "median_deviation_from_mu_0_deg": {
+        "0.0001": 0.0001,
+        "0.001": 0.0008,
+        "0.01": 0.0052,
+        "0.1": 0.0298
+      },
+      "notes": "Compare these channels on the median, not the peak. The peak deviation is 2.7° for every coefficient including mu = 0.0001, which is inter-channel sampling skew and not regularization error."
+    }
+  ],
+  "channels": [
+    "accel_g.__struct.x",
+    "accel_g.__struct.y",
+    "accel_g.__struct.z",
+    "accel_magnitude_g",
+    "attitude_deg.roll",
+    "attitude_deg.pitch",
+    "attitude_reg_deg[0].roll",
+    "attitude_reg_deg[0].pitch",
+    "attitude_reg_deg[1].roll",
+    "attitude_reg_deg[2].roll",
+    "attitude_reg_deg[3].roll",
+    "attitude_reg_deg[4].roll",
+    "mpu_data.temperature",
+    "timings.data_exchange_time_us",
+    "timings.sample_time_us",
+    "timings.signal_processing_us"
+  ],
+  "notes": [
+    "The sensor samples at 1 kHz. Samples reach the host over SWD at roughly 280/s in these captures, which is the polling rate of the acquisition and not a property of the sensor.",
+    "Each variable is read in its own SWD transaction, so two channels recorded in the same row can come from firmware iterations a millisecond apart. attitude_deg.roll and attitude_reg_deg[0].roll are the same quantity computed twice on-target and still differ by a median of about 0.06° for this reason.",
+    "Only attitude_reg_deg[0] carries a pitch channel. Regularization changes the roll formula alone, so the other four would be identical copies of it."
+  ]
+}
