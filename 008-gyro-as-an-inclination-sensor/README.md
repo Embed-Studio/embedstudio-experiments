@@ -1,8 +1,8 @@
-# Experiment #008 — Gyroscope as an Inclination Sensor
+# Experiment #008 — Can a Gyroscope Be Used as an Attitude Sensor?
 
 Raw datasets accompanying the EmbedStudio experiment:
 
-**#008 Gyroscope as an Inclination Sensor: Rotation Without Gravity**
+**#008 Can a Gyroscope Be Used as an Attitude Sensor?**
 
 ## Objective
 
@@ -163,7 +163,7 @@ peak.**
 
 ## Related article
 
-**#008 Gyroscope as an Inclination Sensor: Rotation Without Gravity**
+**#008 Can a Gyroscope Be Used as an Attitude Sensor?**
 
 The article describes the experimental setup, measurements, analysis and
 results obtained from these datasets.

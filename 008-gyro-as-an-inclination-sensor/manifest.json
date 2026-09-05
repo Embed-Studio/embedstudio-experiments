@@ -1,6 +1,6 @@
 {
   "experiment": "008",
-  "title": "Gyroscope as an Inclination Sensor: Rotation Without Gravity",
+  "title": "Experiment #008 — Can a Gyroscope Be Used as an Attitude Sensor?",
   "sensor": "MPU6050",
   "acquisition_rate_hz": 1000,
   "accelerometer_range": "±2 g",
