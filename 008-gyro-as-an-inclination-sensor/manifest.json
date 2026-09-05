@@ -1,0 +1,134 @@
+{
+  "experiment": "008",
+  "title": "Gyroscope as an Inclination Sensor: Rotation Without Gravity",
+  "sensor": "MPU6050",
+  "acquisition_rate_hz": 1000,
+  "accelerometer_range": "±2 g",
+  "gyroscope_range": "±250 °/s",
+  "dlpf_bandwidth_hz": 21,
+  "workspace": {
+    "file": "MPU-6050_008.esws",
+    "note": "The EmbedStudio workspace the captures were recorded with, plus an 'Article figures' dashboard whose views are the ones the article's screenshots were taken from. elf_path and the SWD probe serial were cleared before publishing; neither is needed to review a capture."
+  },
+  "attitude": {
+    "accelerometer_roll_deg": "atan2(a_y, a_z)",
+    "accelerometer_pitch_deg": "atan2(-a_x, sqrt(a_y^2 + a_z^2))",
+    "gyro_angle_deg": "theta[k+1] = theta[k] + omega[k] * dt, one accumulator per axis, dt measured per sample",
+    "gyro_initial_value": "roll and pitch from the accelerometer, yaw = 0",
+    "computed": "on-target, by the firmware, and recorded as the attitude_deg and gyro_angles_deg channels"
+  },
+  "integration_model": {
+    "note": "The three gyro axes are integrated independently. This is a deliberate simplification and is NOT a correct attitude estimator: body-frame angular rates and Euler-angle rates differ away from level, and the axes couple. The roll capture measures how much that costs.",
+    "reset_rule": "gyro_angles_deg is reset to the accelerometer attitude on every iteration while gyro_zero.ready is 0, and whenever gyro_init_request is set. Integration runs freely once the zero-offset estimate is ready."
+  },
+  "captures": [
+    {
+      "file": "data/capture_20260905_141858_gyro_initializtion.hdf5",
+      "purpose": "the integrator being released the moment the gyro zero-offset estimate becomes ready",
+      "samples": 4553,
+      "duration_s": 16.56,
+      "gyro_zero_ready_at_s": 4.499,
+      "notes": "The target restarts at about 1.9 s and every channel reads 0 for roughly 0.4 s. Before 4.499 s the gyro angle is reset every iteration and never differs from the accelerometer attitude by more than 0.04°; after it, the gyro roll moves 0.16° in twelve seconds while the accelerometer roll wanders over a 0.43° band."
+    },
+    {
+      "file": "data/capture_20260905_135810_pitch.hdf5",
+      "purpose": "board rotated about the pitch axis past vertical and back",
+      "samples": 4464,
+      "duration_s": 16.11,
+      "accelerometer_pitch_min_deg": -88.91,
+      "gyro_pitch_min_deg": -99.95,
+      "accelerometer_roll_min_deg": -176.36,
+      "notes": "The rotation runs from about 8.5 s to 14 s. The accelerometer pitch cannot report past ±90°, so it folds back while its roll jumps to -176° to describe the same orientation; the integrated pitch passes through as one continuous number. Over 11-13 s the integrated roll stays inside a 0.55° band. A manual gyro_init_request reset occurs at about 5.0 s, before the rotation; the flag itself is cleared by the firmware faster than the host polls, so it reads 0 throughout."
+    },
+    {
+      "file": "data/capture_20260905_140116_roll.hdf5",
+      "purpose": "board rolled past vertical and back — and the axis coupling that comes with it",
+      "samples": 2022,
+      "duration_s": 7.28,
+      "accelerometer_roll_min_deg": -100.79,
+      "gyro_roll_min_deg": -97.08,
+      "notes": "Rolling through 90° is NOT a singular orientation for atan2(a_y, a_z), and the two roll estimates agree to a median of 1.0° and to 2.5° at the 90th percentile. The disagreement that remains is mostly the accelerometer's: the board is hand-held and the acceleration magnitude reaches 1.28 g. The coupling is in the other axes — gyro pitch goes -11.94 -> -21.40 -> -11.79 and gyro yaw 0 -> +15.10 -> -6.56, an excursion that appears during the rotation and disappears afterwards."
+    },
+    {
+      "file": "data/capture_20260905_145133_yaw.hdf5",
+      "purpose": "a full turn about the vertical axis, which the accelerometer cannot see",
+      "samples": 6275,
+      "duration_s": 22.87,
+      "gyro_yaw_final_deg": -344.69,
+      "gyro_yaw_min_deg": -361.41,
+      "notes": "Turned by hand in four steps from about 8.7 s to 20 s, with plateaus at -82.5, -179.7, -251.3 and -346.3 degrees. There is no jig and no heading reference, so the plateaus are where the operator stopped and the total must NOT be read as a scale error. Accelerometer roll and pitch stay inside ±5° and ±8° for 98% of the rotation. The zero-offset estimator restarts at about 2.2 s and is ready again at 7.9 s."
+    },
+    {
+      "file": "data/capture_20260905_151502_drift_temperature_stable_5_min.hdf5",
+      "purpose": "the drift measurement — five stationary minutes at steady temperature",
+      "samples": 78735,
+      "duration_s": 312.04,
+      "integration_starts_at_s": 6.857,
+      "measurement_window_s": 305.2,
+      "temperature_c": [28.7124, 28.8535],
+      "deviation_from_initial_attitude_deg": { "roll": 1.106, "pitch": -0.805, "yaw": -0.370 },
+      "implied_residual_bias_dps": { "roll": 0.0036, "pitch": -0.0026, "yaw": -0.0011 },
+      "notes": "Deviations are measured from the gyro angle at the sample where gyro_zero.ready first goes high, which is the accelerometer attitude at that instant. Over the same window the accelerometer attitude wanders over 0.49° in roll and 0.51° in pitch without going anywhere."
+    },
+    {
+      "file": "data/capture_20260905_140627_drift_temperature_stable_3_min.hdf5",
+      "purpose": "the same measurement over three minutes, at a different orientation",
+      "samples": 49867,
+      "duration_s": 180.51,
+      "temperature_c": [28.68, 28.8271],
+      "deviation_from_initial_attitude_deg": { "roll": 0.667, "pitch": 0.111, "yaw": -0.108 },
+      "notes": "gyro_zero.ready is 1 for the whole capture, so the reference is the first sample."
+    },
+    {
+      "file": "data/capture_20260905_140221_drift_temperature_varies_3_min.hdf5",
+      "purpose": "stationary, with the temperature moving slightly",
+      "samples": 50559,
+      "duration_s": 180.47,
+      "temperature_c_first_last": [29.406, 28.833],
+      "deviation_from_initial_attitude_deg": { "roll": 4.561, "pitch": 2.776, "yaw": 0.094 },
+      "notes": "A 0.57 °C fall is worth 4.6° of roll in three minutes, against 0.67° over the same time with the temperature steady."
+    },
+    {
+      "file": "data/capture_20260905_145902_drift_cooling_down_3_min.hdf5",
+      "purpose": "stationary, with the sensor cooling from 38.5 °C",
+      "samples": 49945,
+      "duration_s": 181.13,
+      "integration_starts_at_s": 6.110,
+      "temperature_c_first_last": [38.548, 29.909],
+      "deviation_from_initial_attitude_deg": { "roll": 31.75, "pitch": 20.87, "yaw": -9.07 },
+      "mean_rate_dps": { "roll": 0.1814, "pitch": 0.1192, "yaw": -0.0518 },
+      "notes": "The board did not move: its accelerometer roll and pitch stay inside 0.8° and 0.5° bands throughout. ⚠️ This is a qualitative demonstration, NOT a temperature characterization. The cooling rate, the starting temperature and the gradient across the package were all uncontrolled, so no temperature coefficient may be derived from it."
+    }
+  ],
+  "channels": [
+    "accel_g.__struct.x",
+    "accel_g.__struct.y",
+    "accel_g.__struct.z",
+    "attitude_deg.roll",
+    "attitude_deg.pitch",
+    "gyro_dps.__struct.x",
+    "gyro_dps.__struct.y",
+    "gyro_dps.__struct.z",
+    "gyro_angles_deg.__struct.x",
+    "gyro_angles_deg.__struct.y",
+    "gyro_angles_deg.__struct.z",
+    "gyro_inited",
+    "gyro_init_request",
+    "gyro_zero.ready",
+    "mpu_data.temperature",
+    "timings.data_exchange_time_us",
+    "timings.signal_processing_us"
+  ],
+  "channel_notes": {
+    "gyro_angles_deg.__struct.x": "integrated gyro roll",
+    "gyro_angles_deg.__struct.y": "integrated gyro pitch",
+    "gyro_angles_deg.__struct.z": "integrated gyro yaw",
+    "gyro_dps.__struct.*": "calibrated angular rate, the input to the integration",
+    "gyro_zero.ready": "0 while the zero-offset estimate is still being collected, 1 once it is applied"
+  },
+  "notes": [
+    "The sensor samples at 1 kHz. Samples reach the host over SWD at roughly 275/s in these captures, which is the polling rate of the acquisition and not a property of the sensor.",
+    "Each variable is read in its own SWD transaction, so two channels recorded in the same row can come from firmware iterations a millisecond apart. During the fast hand-held sweeps the accelerometer traces also carry isolated single-sample excursions; compare those captures on the median rather than the peak.",
+    "The integration uses the per-sample measured interval from experiment #004, not a nominal one."
+  ]
+}
