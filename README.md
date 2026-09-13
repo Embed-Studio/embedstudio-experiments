@@ -13,4 +13,5 @@ readers to inspect and analyze the measurements themselves.
 | 005 | MPU6050 Noise / Filtering | [Dataset](005-mpu6050-noise-filtering/) |
 | 006 | MPU6050 Estimating Attitude | [Dataset](006-mpu6050-estimating-attitude/) |
 | 007 | MPU6050 Roll Regularization | [Dataset](007-mpu6050-roll-regularization/) |
-| 008 | Gyroscope as an Inclination Sensor | [Dataset](008-gyro-as-an-inclination-sensor/) |
+| 008 | Can a Gyroscope Be Used as an Attitude Sensor? | [Dataset](008-gyro-as-an-inclination-sensor/) |
+| 009 | What Does a Complementary Filter Actually Fix? | [Dataset](009-complementary-filter/) |
