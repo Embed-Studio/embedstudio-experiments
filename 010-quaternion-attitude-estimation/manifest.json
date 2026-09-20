@@ -1,0 +1,161 @@
+{
+  "experiment": "010",
+  "title": "Experiment #010 — Quaternion Attitude Estimation",
+  "sensor": "MPU6050",
+  "acquisition_rate_hz": 1000,
+  "accelerometer_range": "±2 g",
+  "gyroscope_range": "±250 °/s",
+  "dlpf_bandwidth_hz": 21,
+  "workspace": {
+    "file": "MPU-6050_010.esws",
+    "note": "The EmbedStudio workspace the captures were recorded with, plus an 'Article figures' dashboard whose views are the ones the article's screenshots were taken from. elf_path and the SWD probe serial were cleared before publishing; neither is needed to review a capture."
+  },
+  "estimator": {
+    "what_it_is": "A quaternion orientation propagated by the gyroscope and corrected by a proportional gravity feedback term. Computed on-target by the firmware, one instance per gain.",
+    "state": "q, body-to-world, stored as ahrs[i].orientation",
+    "propagation": "q <- normalize(q + 0.5 * (q ⊗ Ω) * dt), with Ω = [0, wx, wy, wz] the angular velocity in the BODY frame, in rad/s",
+    "gravity_world": "[0, 0, 1]",
+    "predicted_gravity": "g_est = q* · g_world, i.e. the world gravity vector rotated into the sensor frame by the CONJUGATE quaternion (ahrs[i].gravity_estimated)",
+    "error": "e = normalize(a) × g_est (ahrs[i].error); ahrs[i].error_norm is |e| and ahrs[i].gravity_error_deg is acos(normalize(a) · g_est) in degrees",
+    "correction": "omega_corrected = omega_gyro + Kp * e, then integrated. NOTHING moves the quaternion towards the accelerometer directly; the loop only ever bends a RATE.",
+    "dt": "the interval MEASURED per sample (experiment #004), not a nominal one",
+    "euler": "quaternion_orientation_deg[i] is quaternion_to_euler(ahrs[i].orientation) converted to degrees, ZYX. Only .x (roll) and .y (pitch) are watched; yaw is NOT recorded from the quaternion.",
+    "trig": "there is no trigonometric function in ahrs_update() or quaternion_integrate(); the only transcendental cost is one square root per normalise"
+  },
+  "gains": {
+    "⚠️ the gain is NOT a channel": "Kp is a compile-time constant array in main.c and never reaches a capture. Read the index mapping below rather than looking for it in the data.",
+    "index_to_kp": { "ahrs[0]": 0.1, "ahrs[1]": 1.0, "ahrs[2]": 10.0 },
+    "quaternion_recorded_for": "ahrs[1] only — Kp = 1. The other two estimators expose their error, error_norm, gravity_error_deg and gravity_estimated, and their Euler angles through quaternion_orientation_deg[0] and [2], but not their quaternions."
+  },
+  "captures": [
+    {
+      "file": "data/capture_20260919_103402_convergence.hdf5",
+      "purpose": "convergence — the board stationary and level, with the orientation of every estimator deliberately reset to a wrong value part way through",
+      "samples": 13458,
+      "duration_s": 105.68,
+      "host_sample_rate_per_s": 127.3,
+      "temperature_c_first_last": [25.42, 25.25],
+      "accel_magnitude_g": { "mean": 1.02434, "sd": 0.00156, "min": 1.01749, "max": 1.03084 },
+      "reset": {
+        "at_s": 6.835,
+        "how_to_find_it": "⚠️ by the step in ahrs[i].gravity_error_deg, NOT by the reset_orientation channel — the firmware clears that flag faster than the host polls, so it reads 0 in every sample of both captures.",
+        "what_it_writes": "process_orientation_reset_request() re-initialises every quaternion estimator through ahrs_init() with the vector (0, 1, 0) treated as an ACCELEROMETER reading, i.e. gravity along the sensor's +Y axis. That is roll = +90°, pitch = 0, and the quaternion becomes [0.7071, 0.7071, 0, 0]. The recorded first post-reset sample is [0.7075, 0.7068, -0.0000, 0.0000].",
+        "gravity_error_deg_at_reset": { "0.1": 90.75, "1.0": 90.70, "10.0": 89.62 },
+        "⚠️ the complementary filters are reset DIFFERENTLY": "the same call passes the same vector (0, 1, 0) to ahrs_gyro_reset(), where it is an ANGLE TRIPLE in degrees — roll 0°, pitch 1°, yaw 0°. So complementary_filer_orientation_deg[3] steps by about 1° and 4°, not by 90°. The two are not comparable at the reset.",
+        "⚠️ the gyro integrator is NOT reset": "gyro_angles_deg is untouched by the request and carries straight through."
+      },
+      "convergence": {
+        "time_to_come_back_under_1_deg_s": { "0.1": 47.77, "1.0": 4.79, "10.0": 0.47 },
+        "time_to_come_back_under_5_deg_s": { "0.1": 32.19, "1.0": 3.14, "10.0": 0.31 },
+        "fitted_decay_time_constant_s": {
+          "note": "least squares on ln(gravity_error_deg − asymptote) against time, over the stretch where the error is between 30° and 3°. Below 30° the small-angle approximation holds; above it the error signal is sin(theta_e), which is why the first part of each decay is slower than the fit.",
+          "0.1": 9.86, "1.0": 0.9925, "10.0": 0.0996,
+          "result": "the loop's time constant is 1/Kp seconds"
+        }
+      },
+      "settled_window_s": [72.0, 105.0],
+      "settled_statistics_deg": {
+        "note": "4217 samples (4215 and 4214 for the two error channels that carry NaNs). This is the window EmbedStudio's Analysis panel measures in article figure 9.",
+        "gravity_error_deg": {
+          "0.1": { "mean": 0.6396, "sd": 0.1521, "max": 1.6324 },
+          "1.0": { "mean": 0.1821, "sd": 0.1149, "max": 1.0628 },
+          "10.0": { "mean": 0.1696, "sd": 0.1107, "max": 0.9838 },
+          "⚠️ the last two are at the accelerometer's own noise floor": "gravity_error_deg is an acos, so it cannot be negative and noise biases it upward. Kp = 1 and Kp = 10 are not distinguishable here; only Kp = 0.1's standing error is."
+        },
+        "roll": {
+          "accelerometer": { "mean": -0.8315, "sd": 0.1565 },
+          "0.1": { "mean": -0.2604, "sd": 0.0294 },
+          "1.0": { "mean": -0.7777, "sd": 0.0072 },
+          "10.0": { "mean": -0.8261, "sd": 0.0389 },
+          "complementary_filter_tau_500ms": { "mean": -0.8046, "sd": 0.0107 }
+        },
+        "pitch": {
+          "accelerometer": { "mean": -2.8392, "sd": 0.1378 },
+          "0.1": { "mean": -2.5883, "sd": 0.0126 },
+          "1.0": { "mean": -2.8132, "sd": 0.0064 },
+          "10.0": { "mean": -2.8365, "sd": 0.0268 }
+        },
+        "standing_error_against_the_accelerometer_mean_deg": {
+          "note": "the estimator's mean minus the accelerometer's mean over the same window. The accelerometer mean is the reference the loop is servoing to, and over 4217 samples its standard error is 0.0024°, so these are resolved.",
+          "0.1": { "roll": 0.5711, "pitch": 0.2509 },
+          "1.0": { "roll": 0.0538, "pitch": 0.0260 },
+          "10.0": { "roll": 0.0054, "pitch": 0.0027 },
+          "result": "the standing error scales as 1/Kp — a proportional controller needs a non-zero error to produce the correction that cancels the gyroscope bias"
+        }
+      },
+      "notes": "⚠️ This capture is STATIONARY, so it says NOTHING about what a high gain costs during motion. The accelerometer is never wrong in it. The cost of a high gain — more of the accelerometer's disturbance reaching the estimate — was measured for the complementary filter in experiment #009 and is NOT measured here. ⚠️ The gyro-only integration in this capture walks +5.24° of roll, +2.49° of pitch and +0.16° of yaw over 104.7 s from t = 1 s. It is included as the uncorrected reference of experiment #008 and is NOT a bias characterisation — one run at one temperature is not that."
+    },
+    {
+      "file": "data/capture_20260919_103633_pitch_sweep.hdf5",
+      "purpose": "the ±90° question — the board swept through vertical in pitch, hand held, twice in each direction",
+      "samples": 3422,
+      "duration_s": 27.10,
+      "host_sample_rate_per_s": 126.3,
+      "temperature_c_min_max": [25.48, 26.46],
+      "accel_magnitude_g": { "mean": 1.0104, "min": 0.8855, "max": 1.1504 },
+      "pitch_from_the_quaternion_deg": { "min": -88.48, "max": 89.54 },
+      "windows_beyond_85_deg_of_pitch_s": [[6.581, 6.922], [19.340, 19.802], [22.452, 22.734]],
+      "quaternion_continuity": {
+        "largest_single_sample_change_in_any_component": 0.0051,
+        "where": "t = 23.72 s, OUTSIDE the near-vertical region",
+        "largest_single_sample_change_inside_pitch_beyond_85_deg": 0.0027,
+        "largest_single_sample_change_in_euler_roll_deg": 36.37,
+        "where_that_is": "t = 22.616 s, at 89.54° of pitch",
+        "norm_min_max": [0.999740, 1.000143]
+      },
+      "euler_roll_transitions": {
+        "note": "the Euler roll computed from the SAME quaternion, over each stretch where it moves fast. 'physical' is the angle between the two quaternions at the ends of the stretch, 2·acos(|q1·q2|) — the rotation the sensor actually performed.",
+        "entries": [
+          { "t_s": [6.721, 6.812], "roll_deg": [54.68, 127.33], "roll_change_deg": 72.6, "pitch_deg": -88.1, "max_component_change": 0.0139, "physical_rotation_deg": 2.26 },
+          { "t_s": [19.500, 19.577], "roll_deg": [-64.20, -126.81], "roll_change_deg": 62.6, "pitch_deg": 88.2, "max_component_change": 0.0118, "physical_rotation_deg": 2.00 },
+          { "t_s": [22.577, 22.639], "roll_deg": [-156.48, -16.91], "roll_change_deg": 139.6, "pitch_deg": 88.8, "max_component_change": 0.0143, "physical_rotation_deg": 3.17 }
+        ],
+        "⚠️ this is not a defect in the estimate": "the Euler angles are a correct reading of a correct quaternion. The singularity belongs to the three-angle representation near ±90° of pitch, which is experiment #007's boundary seen from the other side."
+      },
+      "notes": "⚠️ The board is HAND HELD here, so linear acceleration is present (|a| between 0.886 and 1.150 g) and none of these traces is a steady-state result. ⚠️ Do NOT read the gains' gravity_error_deg during the sweep as disturbance sensitivity: at high gain the estimate follows the accelerometer, disturbed or not, so a small error can mean a wrong estimate. This dataset carries no translate-without-rotating capture; experiment #009's does. ⚠️ The τ = 500 ms complementary filter in this capture reports pitch beyond ±90° (−93.9° to +93.3°) because it integrates the gyro through; the quaternion's Euler pitch is an asin() and saturates at ±90° by construction. They are not measuring the same thing there."
+    }
+  ],
+  "channels": [
+    "accel_g.__struct.x/y/z",
+    "gyro_dps.__struct.x/y/z",
+    "attitude_deg.roll",
+    "attitude_deg.pitch",
+    "gyro_angles_deg.__struct.x/y/z",
+    "ahrs[0..2].gravity_error_deg",
+    "ahrs[0..2].error_norm",
+    "ahrs[0..2].error.__struct.x/y/z",
+    "ahrs[0].error.v[0..2]",
+    "ahrs[0..2].gravity_estimated.__struct.x/y/z",
+    "ahrs[1].orientation.__struct.w/x/y/z",
+    "quaternion_orientation_deg[0..2].__struct.x/y",
+    "complementary_filer_orientation_deg[3].__struct.x/y",
+    "reset_orientation",
+    "gyro_init_request",
+    "gyro_zero.ready",
+    "mpu_data.temperature",
+    "timings.data_exchange_time_us",
+    "timings.signal_processing_us"
+  ],
+  "channel_notes": {
+    "accel_g": "the calibrated accelerometer, in g, NOT normalised. |a| is about 1.0243 in the convergence capture. The firmware normalises its own copy inside ahrs_update(); to compare it with ahrs[i].gravity_estimated, which is a unit vector, scale it by 1/|a|. Article figure 7 uses 0.976243, the median measured in that capture.",
+    "ahrs[i].gravity_estimated": "where the i-th estimator thinks gravity points, in the SENSOR frame. Unit length.",
+    "ahrs[i].error": "the cross product of the normalised accelerometer with gravity_estimated. Its three components are the per-axis correction before the gain.",
+    "ahrs[0].error.v[0..2]": "the same three values as ahrs[0].error.__struct.x/y/z, reached as array elements; the difference is how the symbol was resolved, not what it holds.",
+    "ahrs[i].gravity_error_deg": "acos of the dot product of the two unit vectors, in degrees. ⚠️ It carries a handful of NaN samples — 10 and 12 in the convergence capture for Kp = 1 and Kp = 10, and 3 and 2 in the sweep — where the dot product rounds fractionally above 1 in float32 and acosf() returns NaN. That is the error being essentially zero, not a fault; drop the samples rather than clamping the channel.",
+    "quaternion_orientation_deg[i]": "the i-th estimator's Euler angles in degrees. .x is roll and .y is pitch. Yaw is not watched.",
+    "complementary_filer_orientation_deg[3]": "the τ = 500 ms complementary filter of experiment #009, running over the same samples for comparison. The firmware's own spelling of the identifier is kept, typo included, so the channel names here match the channel names in the captures. The other five filters exist in the firmware and are not watched in these captures.",
+    "gyro_angles_deg": "the unfiltered integration of experiment #008, kept as the uncorrected reference.",
+    "gyro_dps": "the calibrated gyroscope in DEGREES per second. ⚠️ The estimator is fed radians per second; the conversion happens at the call site and is not a recorded channel.",
+    "reset_orientation": "the reset REQUEST flag. ⚠️ Reads 0 in every sample of both captures — the firmware clears it faster than the host polls. Same behaviour as gyro_init_request in experiment #009.",
+    "timings.signal_processing_us": "the whole on-target processing chain: three quaternion estimators, six complementary filters and everything else. 81 µs in 10890 of the 13458 samples of the stationary capture and 80–82 µs in all but four of the rest, on a 168 MHz Cortex-M4. ⚠️ In the hand-held sweep it spreads over 78–100 µs; nothing here explains that and no per-estimator cost may be derived from it.",
+    "timings.data_exchange_time_us": "the I²C read of the sensor, 414 µs in every sample of both captures, for scale."
+  },
+  "notes": [
+    "The sensor samples at 1 kHz. Samples reach the host over SWD at about 127/s in these captures, which is the polling rate of the acquisition and not a property of the sensor. ⚠️ Do not read the sample count of a capture as a sensor rate.",
+    "⚠️ Each variable is read in its own SWD transaction, so two channels recorded in the same row can come from firmware iterations a millisecond apart. At the reset, ahrs[1].orientation shows the new value one row before quaternion_orientation_deg[1] does — that is the skew, not a firmware ordering. Compare fast events on the median, not the peak.",
+    "The gyroscope is calibrated (experiment #003) and its zero-offset estimator reports ready throughout both captures.",
+    "⚠️ Neither capture measures what a high gain costs during motion. The convergence recording is stationary; the sweep is hand held but carries no ground truth and no deliberate translate-without-rotating segment. Take that trade-off from experiment #009's linear-acceleration capture.",
+    "⚠️ Nothing here characterises yaw. Gravity is a direction, so the correction constrains two degrees of freedom out of three and leaves yaw as the pure integration of experiment #008. The quaternion's yaw is not even recorded.",
+    "⚠️ The die temperature moves 0.2 °C in the convergence capture and 1.0 °C in the sweep. Nothing here characterises the temperature dependence of anything — that is deferred to a later experiment."
+  ]
+}

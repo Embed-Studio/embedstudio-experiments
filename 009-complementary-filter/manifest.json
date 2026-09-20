@@ -1,0 +1,170 @@
+{
+  "experiment": "009",
+  "title": "Experiment #009 — What Does a Complementary Filter Actually Fix?",
+  "sensor": "MPU6050",
+  "acquisition_rate_hz": 1000,
+  "accelerometer_range": "±2 g",
+  "gyroscope_range": "±250 °/s",
+  "dlpf_bandwidth_hz": 21,
+  "workspace": {
+    "file": "MPU-6050_009.esws",
+    "note": "The EmbedStudio workspace the captures were recorded with, plus an 'Article figures' dashboard whose views are the ones the article's screenshots were taken from. elf_path and the SWD probe serial were cleared before publishing; neither is needed to review a capture."
+  },
+  "attitude": {
+    "accelerometer_roll_deg": "atan2(a_y, a_z)",
+    "accelerometer_pitch_deg": "atan2(-a_x, sqrt(a_y^2 + a_z^2))",
+    "gyro_angle_deg": "theta[k+1] = theta[k] + omega[k] * dt, one accumulator per axis, dt measured per sample",
+    "complementary_roll_deg": "theta[k] = alpha * (theta[k-1] + omega_x[k] * dt) + (1 - alpha) * accel_roll",
+    "complementary_pitch_deg": "theta[k] = alpha * (theta[k-1] + omega_y[k] * dt) + (1 - alpha) * accel_pitch",
+    "complementary_yaw_deg": "theta[k] = theta[k-1] + omega_z[k] * dt — NOT filtered. The accelerometer carries no heading information, so the yaw channel of every filter is the same pure integration as gyro_angles_deg.z. Nothing in this dataset characterises that axis.",
+    "computed": "on-target, by the firmware, and recorded as the attitude_deg, gyro_angles_deg and complementary_filer_attitude_deg channels"
+  },
+  "filter_constants": {
+    "note": "alpha is computed once at startup as tau / (tau + LOOP_TIME_MS) with LOOP_TIME_MS = 1. The dt passed to the filter is the interval MEASURED per sample (experiment #004), which is 1.0009 ms, so every effective time constant is 0.09 % longer than its nominal label. The nominal values are what the tau_ms channels carry.",
+    "tau_ms_to_alpha": {
+      "10": 0.9090909,
+      "50": 0.9803922,
+      "100": 0.9900990,
+      "500": 0.9980040,
+      "1000": 0.9990010,
+      "5000": 0.9998000
+    },
+    "measured_correction_time_constant_ms": {
+      "note": "Fitted to the exponential decay of the filter's initial error at the start of a capture, where the accumulator was carrying a value from the previous recording. Only the two longest filters had an initial error large enough to fit.",
+      "1000": 1029,
+      "5000": [5058, 4976]
+    },
+    "⚠️ not all captures carry all six filters": "The five-minute stationary capture was recorded with a four-filter build and carries tau = 10, 50, 100 and 500 ms only. tau = 1000 ms and tau = 5000 ms exist in the other three captures. Do not read a missing channel as a filter that failed."
+  },
+  "initialization": {
+    "rule": "The gyro integrator and all complementary filter accumulators are seeded together, from the SAME value, once gyro_zero.ready is 1 and 100 accelerometer attitude samples have been averaged. Roll and pitch are seeded from that average and yaw from zero.",
+    "channels": "cnt_accel_samples counts the averaging window and accu_accel_attitude_deg carries the running sum; gyro_inited goes to 1 at the moment the seed is applied. gyro_init_request is cleared by the firmware faster than the host polls, so it reads 0 in every capture."
+  },
+  "captures": [
+    {
+      "file": "data/capture_20260912_172932_stationary.hdf5",
+      "purpose": "noise and drift — five stationary minutes, the board set down and left alone",
+      "samples": 65810,
+      "duration_s": 302.18,
+      "filters_present": [10, 50, 100, 500],
+      "measurement_window_s": [5.0, 302.2],
+      "temperature_c_first_last": [27.17, 26.70],
+      "standard_deviation_deg": {
+        "note": "over the 297.2 s window, 64650 samples",
+        "roll": { "accelerometer": 0.05605, "gyro_only": 0.17325, "tau_10": 0.0377, "tau_50": 0.0213, "tau_100": 0.01584, "tau_500": 0.0091 },
+        "pitch": { "accelerometer": 0.05690, "gyro_only": 0.97895, "tau_10": 0.0388, "tau_50": 0.0220, "tau_100": 0.01640, "tau_500": 0.0080 }
+      },
+      "movement_over_the_window_deg": {
+        "gyro_only": { "roll": 0.207, "pitch": 3.591 },
+        "complementary": "every filter ended within 0.06° (roll) and 0.02° (pitch) of where it started"
+      },
+      "notes": "The gyro-only standard deviation is the largest of the three and is NOT noise — it is the slow wander of an individually smooth curve. Read the shape, not the number. The die temperature falls 0.47 °C over the recording; that is not a controlled variable and no temperature coefficient may be derived from it."
+    },
+    {
+      "file": "data/capture_20260912_174843_dynamic_response.hdf5",
+      "purpose": "response — fourteen seconds of hand-held rotation about all three axes, ending back at rest",
+      "samples": 2911,
+      "duration_s": 14.55,
+      "filters_present": [10, 50, 100, 500, 1000, 5000],
+      "final_roll_error_deg": {
+        "note": "mean over the last 1.5 s, relative to the accelerometer, with the board back at rest",
+        "gyro_only": 23.36, "tau_10": 0.00, "tau_50": 0.00, "tau_100": 0.00,
+        "tau_500": 0.03, "tau_1000": 0.47, "tau_5000": 10.21
+      },
+      "final_pitch_error_deg": { "gyro_only": -7.65, "tau_1000": -0.18, "tau_5000": -4.13 },
+      "accelerometer_glitch": {
+        "at_s": [11.4078, 11.4129],
+        "accelerometer_roll_deg": [-134.90, 44.95],
+        "note": "Two consecutive samples during a sharp jolt, while the board was within a few degrees of level. atan2 reports the angle of whatever acceleration vector it is given. See passed_through_deg for what each filter did with it.",
+        "passed_through_deg": { "tau_10": 27.1, "tau_50": 7.8, "tau_100": 3.9, "tau_500": 0.6, "tau_1000": 0.2, "tau_5000": 0.4 },
+        "passed_through_definition": "Each filter's excursion from its OWN value one sample before the glitch (t = 11.4078 s), which is the only baseline free of the real rotation still going on. A window median is not usable here. tau = 10 ms is back within 15 ms of the glitch and tau = 100 ms within 56 ms.",
+        "article_figure": 7
+      },
+      "notes": "⚠️ The 23.4° gyro-only error is NOT drift. Fourteen seconds at the residual bias measured in the stationary capture is 0.2°. It is the axis-coupling error of experiment #008 — three Euler angles integrated independently, which is only valid near level. The tau = 5000 ms filter starts this capture carrying a 19.6° error from the previous recording and never catches up; its figures here are a convergence transient, not a steady-state result."
+    },
+    {
+      "file": "data/capture_20260912_175250_linear_acceleration.hdf5",
+      "purpose": "linear acceleration — the board translated by hand, deliberately not rotated",
+      "samples": 2331,
+      "duration_s": 11.71,
+      "filters_present": [10, 50, 100, 500, 1000, 5000],
+      "filters_with_yaw_channel": [],
+      "rotation_actually_performed_deg_pk_pk": { "gyro_roll": 2.40, "gyro_pitch": 3.13 },
+      "disturbance_window_s": [6.0, 11.7],
+      "roll_deviation_from_own_median_deg": {
+        "accelerometer": { "max": 21.23, "sd": 3.705 },
+        "tau_10": { "max": 14.26, "sd": 3.391 },
+        "tau_50": { "max": 10.34, "sd": 2.801 },
+        "tau_100": { "max": 7.71, "sd": 2.199 },
+        "tau_500": { "max": 2.95, "sd": 0.916 },
+        "tau_1000": { "max": 1.77, "sd": 0.664 }
+      },
+      "worst_single_instant_s": 9.334,
+      "worst_single_instant_roll_deg": { "accelerometer": -23.80, "median_baseline": -2.17, "tau_10": -14.12, "tau_50": -11.62, "tau_100": -8.88, "tau_500": -4.69, "tau_1000": -3.88, "tau_5000": -1.23 },
+      "notes": "⚠️ The tau = 5000 ms roll figures must NOT be read as disturbance rejection: that filter enters the capture with a 12.6° error and is still converging throughout, so its deviation is dominated by the transient. Its PITCH figures are clean (max 1.04°, sd 0.447°). The gyro-integrated angles are the evidence that the board was translating rather than turning — 2.4° and 3.1° peak-to-peak over the whole recording. In the article the gyro-only roll is drawn with a per-curve offset of -20.46°, the measured median gap between the two estimates, so its shape can be compared on the accelerometer's scale; the recorded channel is the raw angle. This capture carries no complementary-filter yaw channels; only the roll and pitch members were watched."
+    },
+    {
+      "file": "data/capture_20260912_174243_roll_instability.hdf5",
+      "purpose": "the ±90° limitation — the board pitched forward past vertical, which destroys the accelerometer roll estimate",
+      "samples": 2440,
+      "duration_s": 12.25,
+      "filters_present": [10, 50, 100, 500, 1000, 5000],
+      "accelerometer_pitch_min_deg": -89.81,
+      "gyro_pitch_min_deg": -99.35,
+      "pitch_beyond_80_deg_window_s": [6.973, 8.526],
+      "accelerometer_roll_range_during_the_event_deg": [-177.96, 154.06],
+      "gyro_roll_range_during_the_event_deg": [-3.55, 3.47],
+      "worst_roll_reported_deg": { "accelerometer": -177.96, "tau_10": -165.97, "tau_50": -159.24, "tau_100": -155.70, "tau_500": -130.04, "tau_1000": -98.09, "tau_5000": -29.60 },
+      "recovery_after_the_excursion_s": {
+        "note": "time to come back within 5° of the accelerometer roll and stay there, measured from 8.565 s, the last sample at which the accelerometer roll exceeded 30°",
+        "tau_10": 0.30, "tau_50": 0.43, "tau_100": 0.44, "tau_500": 1.58, "tau_1000": 2.84,
+        "tau_5000": "still 10.6° out when the capture ends 3.68 s later"
+      },
+      "angle_wrap": {
+        "at_s": [7.4122, 7.4219],
+        "accelerometer_roll_deg": [154.06, -162.95],
+        "note": "Consecutive samples 43° apart as orientations and 317° apart as numbers. The filter blends the numbers, so every sample across the wrap drags the output most of the way round the circle. The firmware here does no wrap handling, deliberately."
+      },
+      "notes": "⚠️ This is the pitch→±90° singularity of experiment #007, not a roll singularity. Roll is atan2(a_y, a_z), and as pitch approaches vertical both of those components shrink into the noise. Rolling through 90° is NOT singular and nothing here should be read as saying it is. ⚠️ A longer time constant reports a smaller excursion but is NOT more correct — it is slower, and it stays wrong after the board has returned to a normal attitude."
+    }
+  ],
+  "channels": [
+    "attitude_deg.roll",
+    "attitude_deg.pitch",
+    "gyro_angles_deg.__struct.x",
+    "gyro_angles_deg.__struct.y",
+    "gyro_angles_deg.__struct.z",
+    "complementary_filer_attitude_deg[0..3].__struct.x/y/z",
+    "complementary_filer_attitude_deg[4..5].v[0..2]",
+    "tau_ms[0..5]",
+    "alpha[0..5]",
+    "accu_accel_attitude_deg.roll",
+    "accu_accel_attitude_deg.pitch",
+    "cnt_accel_samples",
+    "gyro_inited",
+    "gyro_init_request",
+    "gyro_zero.ready",
+    "mpu_data.temperature",
+    "timings.data_exchange_time_us",
+    "timings.signal_processing_us"
+  ],
+  "channel_notes": {
+    "complementary_filer_attitude_deg[i]": "the i-th filter's roll, pitch and yaw, in that order. The firmware's own spelling of the identifier is kept, typo included, so the channel names here match the channel names in the captures. Index order is tau = 10, 50, 100, 500, 1000, 5000 ms — read tau_ms[i] rather than assuming it.",
+    "complementary_filer_attitude_deg[0..3]": "struct members .x .y .z — roll, pitch, yaw",
+    "complementary_filer_attitude_deg[4..5]": "the same three values reached as array elements .v[0] .v[1] .v[2]; the difference is how the symbol was resolved, not what it holds",
+    "tau_ms[i]": "the nominal time constant of filter i, in milliseconds — constant for a whole capture",
+    "alpha[i]": "the filter coefficient derived from tau_ms[i] at startup — constant for a whole capture",
+    "gyro_angles_deg.__struct.x/y/z": "the unfiltered integration of experiment #008, kept as the reference the filters are compared against",
+    "accu_accel_attitude_deg.*": "running sum of the accelerometer attitude during the 100-sample averaging that seeds the filters; zero outside that window",
+    "cnt_accel_samples": "how many samples that average has taken; returns to 0 once the seed is applied",
+    "timings.signal_processing_us": "the whole on-target processing chain including every complementary filter — 45 µs with six filters, 44 µs with four, on a 168 MHz Cortex-M4",
+    "timings.data_exchange_time_us": "the I²C read of the sensor, 414 µs, for scale"
+  },
+  "notes": [
+    "The sensor samples at 1 kHz. Samples reach the host over SWD at roughly 200/s in these captures and 218/s in the stationary one, which is the polling rate of the acquisition and not a property of the sensor. The difference between the two is the number of watched channels.",
+    "Each variable is read in its own SWD transaction, so two channels recorded in the same row can come from firmware iterations a millisecond apart. During the fast hand-held sweeps the accelerometer traces also carry isolated single-sample excursions; compare those captures on the median rather than the peak.",
+    "⚠️ Three of the four captures start with one or more filters carrying an accumulator value from the previous recording. That transient is real filter behaviour and it is what the correction-time-constant fits are taken from, but it is not a steady-state result and must not be read as one.",
+    "The integration and the filters both use the per-sample measured interval from experiment #004; only alpha is computed from a nominal 1 ms.",
+    "The die temperature is recorded in every capture and stays within 0.6 °C in all four. ⚠️ Nothing here characterises the temperature dependence of anything — that is deferred to a later experiment."
+  ]
+}

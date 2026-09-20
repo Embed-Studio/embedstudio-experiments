@@ -15,3 +15,4 @@ readers to inspect and analyze the measurements themselves.
 | 007 | MPU6050 Roll Regularization | [Dataset](007-mpu6050-roll-regularization/) |
 | 008 | Can a Gyroscope Be Used as an Attitude Sensor? | [Dataset](008-gyro-as-an-inclination-sensor/) |
 | 009 | What Does a Complementary Filter Actually Fix? | [Dataset](009-complementary-filter/) |
+| 010 | Quaternion Attitude Estimation | [Dataset](010-quaternion-attitude-estimation/) |
