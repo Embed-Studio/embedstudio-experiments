@@ -1,0 +1,229 @@
+{
+  "experiment": "011",
+  "title": "Experiment #011 — Mahony AHRS and Online Gyroscope Bias Estimation",
+  "sensor": "MPU6050",
+  "acquisition_rate_hz": 1000,
+  "accelerometer_range": "±2 g",
+  "gyroscope_range": "±250 °/s",
+  "dlpf_bandwidth_hz": 21,
+  "workspace": {
+    "note": "No EmbedStudio workspace is shipped with this experiment. The captures open in EmbedStudio review mode or in any HDF5 reader; the article's figures were rendered from them by the scripts in results/."
+  },
+  "estimator": {
+    "what_it_is": "The quaternion estimator of experiment #010 with an integral term: a gyroscope bias estimate b is learned from the gravity error and subtracted from the rate. Computed on-target, one instance per integral gain.",
+    "error": "e = normalize(a) × g_est",
+    "bias_update": "b[k] = b[k-1] - Ki * e * dt   (rad/s)",
+    "rate_used": "omega_used = omega_gyro - b + Kp * e   (rad/s), then integrated into the quaternion",
+    "kp": 1.0,
+    "gravity_world": "[0, 0, 1]"
+  },
+  "gains": {
+    "⚠️ the gains are NOT channels": "Ki is a compile-time constant array in main.c and never reaches a capture. Read the index mapping below rather than looking for it in the data.",
+    "index_to_ki": {
+      "ahrs[0]": 0.1,
+      "ahrs[1]": 1.0,
+      "ahrs[2]": 10.0,
+      "ahrs[3]": 0.0
+    },
+    "ahrs[3]": "Ki = 0 with the same Kp = 1: experiment #010's proportional-only estimator, the baseline.",
+    "quaternion_recorded_for": "ahrs[1] only (Ki = 1). It is the only instance with a quaternion, so the only one whose yaw can be computed."
+  },
+  "offset_injection": {
+    "what": "In the three 'gyro_bias_*' captures the gyroscope calibration offset mpu_cal.gyro_bias was overwritten by hand over SWD, one axis at a time, while the board stood still. The write is visible as a step in the mpu_cal.gyro_bias channels.",
+    "unit": "mpu_cal.gyro_bias is in raw LSB; rate = (raw - bias) / scale",
+    "scale_lsb_per_dps": {
+      "x": 132.2,
+      "y": 131.1,
+      "z": 130.9
+    },
+    "imposed_offset_rad_per_s": {
+      "x": -0.0592,
+      "y": -0.0763,
+      "z": -0.0593
+    },
+    "imposed_offset_dps": {
+      "x": -3.39,
+      "y": -4.37,
+      "z": -3.4
+    },
+    "note": "The same three writes, +448 / +573 / +444 LSB on X / Y / Z, were made in all three captures; they reproduce to within 0.0001 rad/s. The write times differ per capture and are found as the first sample at which the channel changes."
+  },
+  "captures": [
+    {
+      "file": "data/capture_20261010_081806_gyro_bias_step.hdf5",
+      "purpose": "the offset test at the original tilt: three offsets written live, four integral gains running on the same samples",
+      "samples": 6758,
+      "duration_s": 70.3,
+      "polling_rate_hz": 96,
+      "board_tilt_deg": 11.9,
+      "gravity_direction_sensor_frame": [
+        0.088,
+        0.187,
+        0.978
+      ],
+      "temperature_c": [
+        26.96,
+        28.24
+      ],
+      "writes": {
+        "y": {
+          "t_s": 10.152,
+          "lsb": 573.2
+        },
+        "x": {
+          "t_s": 12.529,
+          "lsb": 448.5
+        },
+        "z": {
+          "t_s": 19.533,
+          "lsb": 444.4
+        }
+      },
+      "initialisation_s": 5.554,
+      "observable_offset_rad_per_s": {
+        "x": -0.0523,
+        "y": -0.0618,
+        "z": 0.0165
+      },
+      "yaw_drift_after_writes_dps": -4.44,
+      "notes": "The estimator initialises at 5.55 s and the first 5.55 s of the record are the pre-initialisation interval, where the quaternion channels read 0. The observable offset is the component of the applied offset perpendicular to gravity; the Ki = 1 and Ki = 10 estimates end within 1 % of it. The remainder, along gravity, appears as yaw drift."
+    },
+    {
+      "file": "data/capture_20261010_132717_gyro_bias_flat.hdf5",
+      "purpose": "the same offset test with the board almost flat, where the observable part is largest",
+      "samples": 5808,
+      "duration_s": 60.9,
+      "polling_rate_hz": 95,
+      "board_tilt_deg": 2.3,
+      "gravity_direction_sensor_frame": [
+        -0.04,
+        0.001,
+        0.999
+      ],
+      "temperature_c": [
+        26.62,
+        26.77
+      ],
+      "writes": {
+        "x": {
+          "t_s": 13.61,
+          "lsb": 448.1
+        },
+        "y": {
+          "t_s": 22.75,
+          "lsb": 573.4
+        },
+        "z": {
+          "t_s": 34.25,
+          "lsb": 444.8
+        }
+      },
+      "observable_share_of_offset": 0.864,
+      "observable_offset_rad_per_s": {
+        "x": -0.06145,
+        "y": -0.07626,
+        "z": -0.00238
+      },
+      "yaw_drift_after_writes_dps": -3.27,
+      "notes": "Ends 27 s after the last write: Ki = 1 and Ki = 10 have settled, Ki = 0.1 has not, so convergence times must not be read from this record."
+    },
+    {
+      "file": "data/capture_20261010_132429_gyro_bias_tilted.hdf5",
+      "purpose": "the same offset test with the board tilted to 48°, where most of the offset is along gravity and cannot be observed",
+      "samples": 6158,
+      "duration_s": 64.1,
+      "polling_rate_hz": 96,
+      "board_tilt_deg": 48.2,
+      "gravity_direction_sensor_frame": [
+        0.47,
+        0.579,
+        0.666
+      ],
+      "temperature_c": [
+        26.47,
+        26.72
+      ],
+      "writes": {
+        "x": {
+          "t_s": 11.64,
+          "lsb": 448.5
+        },
+        "y": {
+          "t_s": 24.01,
+          "lsb": 573.2
+        },
+        "z": {
+          "t_s": 35.71,
+          "lsb": 444.4
+        }
+      },
+      "observable_share_of_offset": 0.179,
+      "observable_offset_rad_per_s": {
+        "x": -0.00677,
+        "y": -0.01182,
+        "z": 0.01504
+      },
+      "yaw_drift_after_writes_dps": -6.39,
+      "notes": "Ends 28 s after the last write: Ki = 1 and Ki = 10 have settled, Ki = 0.1 has not (its X estimate is still at 132 % of its target). The yaw reaches -249° by the end of the record; only its slope is used."
+    },
+    {
+      "file": "data/capture_20261010_121258_thermal_stabilization.hdf5",
+      "purpose": "a still board whose gyroscope warms by about 16 °C and cools again, with no offset written",
+      "samples": 58500,
+      "duration_s": 605.9,
+      "polling_rate_hz": 97,
+      "board_tilt_deg": 48.7,
+      "accelerometer_roll_pitch_deg": [
+        41.1,
+        -28.5
+      ],
+      "temperature_c": [
+        24.98,
+        41.31
+      ],
+      "temperature_peak_s": 86.5,
+      "gyro_shift_lsb": {
+        "x": 54,
+        "y": 47,
+        "z": 19
+      },
+      "notes": "The sensor was warmed and left to cool without being moved. The offset change is real drift, not an injected step. ⚠️ Its offset did not return to the value it had before the heating, and nothing here says whether that repeats: this is one part and one thermal cycle."
+    }
+  ],
+  "channels": [
+    "accel_g.__struct.x/y/z",
+    "gyro_dps.__struct.x/y/z",
+    "attitude_deg.roll/pitch",
+    "gyro_angles_deg.__struct.x/y/z",
+    "mpu_cal.gyro_bias.__struct.x/y/z",
+    "ahrs[0..3].bias.__struct.x/y/z",
+    "ahrs[0..3].gravity_error_deg",
+    "ahrs[0..3].error_norm",
+    "ahrs[0..3].error.__struct.x/y/z",
+    "ahrs[0..3].gravity_estimated.__struct.x/y/z",
+    "ahrs[1].orientation.__struct.w/x/y/z",
+    "quaternion_orientation_deg[0..3].__struct.x/y",
+    "complementary_filer_orientation_deg[3].__struct.x/y",
+    "reset_orientation",
+    "gyro_init_request",
+    "gyro_zero.ready",
+    "mpu_data.temperature",
+    "timings.data_exchange_time_us",
+    "timings.signal_processing_us"
+  ],
+  "channel_notes": {
+    "ahrs[i].bias": "the estimated gyroscope bias in rad/s, in the SENSOR frame. It is subtracted from the rate: omega_used = omega - bias + Kp * e.",
+    "mpu_cal.gyro_bias": "the gyroscope calibration offset in raw LSB. The manual writes show here.",
+    "gyro_dps": "the calibrated gyroscope in degrees per second, (raw - mpu_cal.gyro_bias) / scale. The estimator is fed radians per second; the conversion is at the call site.",
+    "quaternion_orientation_deg[i]": "Euler angles from the i-th estimator, .x roll and .y pitch. Yaw is not watched; compute it from ahrs[1].orientation.",
+    "complementary_filer_orientation_deg[3]": "the complementary filter of experiment #009. The firmware's spelling of the identifier is kept, typo included."
+  },
+  "notes": [
+    "The sensor samples at 1 kHz. Samples reach the host over SWD at about 96 per second, which is the polling rate of the acquisition and not a property of the sensor. Do not read the sample count of a capture as a sensor rate.",
+    "Each variable is read in its own SWD transaction, so two channels recorded in the same row can come from firmware iterations a millisecond apart.",
+    "⚠️ The estimator does not recover the full applied offset. Gravity constrains only the bias perpendicular to it; the part along gravity is invisible to the integral term and shows up as yaw drift. The 'observable' numbers above are what an ideal estimator would reach, not what was applied.",
+    "⚠️ Each tilt was captured once, with no independent attitude reference, so there is no run-to-run spread.",
+    "⚠️ The thermal capture is one part and one thermal cycle. Do not fit a temperature coefficient to it, and do not assume the offset will return to the same value after a cycle on another part.",
+    "⚠️ Experiment #011's imposed offsets are written by hand over SWD. They are not an injection channel: no channel marks the writes except the step in mpu_cal.gyro_bias."
+  ]
+}

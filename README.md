@@ -16,3 +16,4 @@ readers to inspect and analyze the measurements themselves.
 | 008 | Can a Gyroscope Be Used as an Attitude Sensor? | [Dataset](008-gyro-as-an-inclination-sensor/) |
 | 009 | What Does a Complementary Filter Actually Fix? | [Dataset](009-complementary-filter/) |
 | 010 | Quaternion Attitude Estimation | [Dataset](010-quaternion-attitude-estimation/) |
+| 011 | Mahony AHRS and Online Gyroscope Bias Estimation | [Dataset](011-mahony-filter/) |
